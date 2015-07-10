@@ -1,3 +1,12 @@
+//	File: 		libmylabsort.c
+//	Autor: 		me1ga
+//	Created: 	10 июнь 2015 г.
+//	Compile string:
+//	1) gcc -fPIC -c libmylabsort.c -pthread
+//	2) gcc -shared -o libmylabsort.so libmylabsort.o
+//	export LD_LIBRARY_PATH
+//
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> //strdup();
