@@ -5,8 +5,6 @@
 //	1) gcc -fPIC -c libmylabsort.c -pthread
 //	2) gcc -shared -o libmylabsort.so libmylabsort.o
 //	export LD_LIBRARY_PATH
-//
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> //strdup();
