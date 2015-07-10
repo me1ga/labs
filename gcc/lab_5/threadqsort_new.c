@@ -1,3 +1,9 @@
+//  File:       threadqsort_new.c
+//  Autor:      me1ga
+//  Created:    10 июнь 2015 г.
+//  Compile string:
+//  1) gcc threadqsort_new.c -pthread -ldl -o lab_4_new
+//  libmylabsort.so in libraries required !
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> //strdup();
