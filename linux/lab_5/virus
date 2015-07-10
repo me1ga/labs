@@ -1,0 +1,16 @@
+#!/bin/bash
+
+echo "Какую папку заразить?";
+printf "Путь: ";
+read road;
+if [[ ${road:0:1} == '~' ]]; then
+	road="$HOME"${road:1:$((${#road}-1))};
+fi
+otvet=$(ls $road 2>&1);
+if [[ "${otvet:0:4}" == "ls: " ]]; then
+	echo "Нету доступа к $road";
+	exit 1;
+else
+	echo "Доступ есть";
+fi
+#find $road -type f >> test.tmp;

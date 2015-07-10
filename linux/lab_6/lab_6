@@ -1,0 +1,6 @@
+#!/bin/bash
+
+clear;
+echo "Поиск LOG файлов.";
+printf "Введите название программы: ";
+#find /var/log

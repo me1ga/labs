@@ -1,0 +1,240 @@
+#!/bin/bash
+
+if [[ $# -eq 0 ]]
+then
+clear;
+user=$(whoami);
+echo '1) Запустить отслеживание процесса';
+echo '2) Убрать отслеживание процесса';
+echo '3) Просмотреть задачу';
+echo '0) Выход';
+printf 'Выберите пункт: ';
+read -n 1 vybor;
+clear
+case $vybor in
+1)
+	if [[ $(ls ~/ | grep lab4.cfg ) != '' ]]; then
+		source ~/lab4.cfg
+		nosc=0;
+		while [[ ${pid[$nosc]} != '' ]]; do
+			nosc=$(($nosc+1));
+		done
+	else
+		nosc=0;
+	fi
+	printf 'Введите имя отслеживаемого процесса: ';
+	read name;
+	ps -o pid,wchan,cmd -e | sed '/pipe_w/d' | grep $name;
+	printf "\n"'Выберите PID отслеживаемого процесса: ';
+	read pid;
+	temp=$(ps -o pid,wchan,cmd -e | sed '/pipe_w/d' | grep $name | grep $pid);
+	clear;
+	if [[ ${#temp} -ne 0 ]]
+	then
+		printf "Процесс найден...\n";
+		temp=$(ps -o cmd --pid $pid | tail -1);
+		crontab -l 1> ~/crontab.tmp 2>> /dev/null;
+		prov=$(cat ~/crontab.tmp | grep '#lab4scan');
+		if [ "$prov" ==  "#lab4scan" ];
+		then
+			echo 'ERROR: Задача сканирования уже запущена!';
+			exit 1;
+		fi
+		printf "Выберите метку задачи: "
+		read metka;
+		printf "Выберите интервал сканирования: \n"
+		printf "1) Минутный\n"
+		printf "2) Часовой\n"
+		printf "Выбор: ";
+		read -n 1 interval;
+		case $interval in
+			1)
+				printf '\nВыбкрите интервал между проверками[минуты=1..30]: '
+				read minutes;
+				if [ "$minutes" -eq "$minutes" 2>> /dev/null ];
+				then
+					if  (( $minutes<30 && $minutes>0 ));
+					then
+						printf "#lab4scan_${metka}_\n*/$minutes * * * * /home/mega/LABS/LAB4/lab4 $user scan $nosc\n">>~/crontab.tmp;
+					else
+						echo 'ERROR: Ошибка условия!';
+						exit 1;
+					fi
+				else
+					clear;
+					echo 'ERROR: Введены буквы!';
+					exit 1;
+				fi
+			;;
+			2)
+				printf '\nВыбкрите интервал между проверками[часы=1..24]: '
+				read hours;
+				if [ $hours -eq $hours 2>> /dev/null ];
+				then
+					if (( $hours<24 && $hours>0 ));
+					then
+						printf "#lab4scan_${metka}_\n* */$hours * * * /home/mega/LABS/LAB4/lab4 $user scan $nosc\n">>~/crontab.tmp;
+					else
+						echo 'ERROR: Ошибка условия!';
+						exit 1;
+					fi
+				else
+					clear;
+					echo 'ERROR: Введены буквы!';
+					exit 1;
+				fi
+			;;
+		esac
+		crontab ~/crontab.tmp;
+		rm ~/crontab.tmp;
+		length=${#temp};
+		counter=0;
+		temporarycommand='';
+		if [[ ${temp:0:1} == "/" ]]
+		then
+			echo "command[$nosc]=$temp">>~/lab4.cfg;
+			while [[ ${temp:$counter:1} != ' ' && $counter != $length ]]; do
+				temporarycommand=$temporarycommand${temp:$counter:1};
+				counter=$(($counter+1));
+			done
+			echo "name[$nosc]=$temporarycommand">>~/lab4.cfg;
+		else
+			while [[ ${temp:$counter:1} != ' ' && $counter != $length ]]; do
+				temporarycommand=$temporarycommand${temp:$counter:1};
+				counter=$(($counter+1));
+			done
+			dir=$(which $temporarycommand);
+			ostlength=$(($length-$counter));
+			echo "command[$nosc]=$dir${temp:$counter:$ostlength}">>~/lab4.cfg;
+			echo "name[$nosc]=$temporarycommand">>~/lab4.cfg;
+		fi
+		echo "pid[$nosc]=$pid">>~/lab4.cfg;
+		echo "Проверка запущена."
+	else
+		echo 'ERROR: Процесс не найден!';
+		exit 1;
+	fi
+;;
+2)
+	crontab -l 1> ~/crontab.tmp 2> /dev/null;
+	temp=$(cat ~/crontab.tmp | grep '#lab4scan');
+	if [[ ${#temp} == '0' ]]; then
+		echo "Задачи контроля процесса нет!";
+		rm ~/crontab.tmp;
+	else
+		cat ~/crontab.tmp | sed -n '/#lab4scan/p' 1> ~/temp_lab4.tmp;
+		counter=0;
+		while [[ $(cat ~/temp_lab4.tmp | grep "#lab4scan") != '' ]]; do
+			metka[$counter]="$(cat ~/temp_lab4.tmp | head -n 1)";
+			sed -i '1 d' ~/temp_lab4.tmp;
+			metkaz[$counter]="${metka[$counter]:10:$((${#metka[$counter]}-11))}";
+			echo "$counter) ${metkaz[$counter]}";
+			counter=$(($counter+1));
+		done
+		read z;
+		if [[ $z -eq $z ]]; then
+			if (( $z>=0 && $z<=$counter )); then
+				cat ~/crontab.tmp | sed -n '/#lab4scan/,+1p' 1> ~/temp_lab4.tmp;
+				cat ~/temp_lab4.tmp | sed "/${metka[$z]}/,+1d" 1> ~/temp_lab4_.tmp 2>> ~/lab4.log;
+				mv ~/temp_lab4_.tmp ~/temp_lab4.tmp;
+				cat ~/crontab.tmp | sed -n '/#lab4scan/,+1d' 1> ~/crontab_.tmp 2>> ~/lab4.log;
+				mv ~/crontab_.tmp ~/crontab.tmp;
+				cat ~/temp_lab4.tmp >> ~/crontab.tmp;
+				echo "" >> ~/crontab.tmp;
+				crontab -r;
+				crontab ~/crontab.tmp;
+				if [[ $(cat ~/crontab.tmp | grep "#lab4scan" ) == '' ]]; then
+					rm ~/lab4.cfg;
+				fi
+				rm ~/temp_lab4.tmp;
+				rm ~/crontab.tmp;
+			else
+				echo 'ERROR: Несуществующий пункт!';
+				exit 1;
+			fi
+		else
+			echo 'ERROR: Введены буквы!';
+			exit 1;
+		fi
+	fi
+;;
+3)
+	crontab -l 1> ~/crontab.tmp 2> /dev/null;
+	temp=$(cat ~/crontab.tmp | grep '#lab4scan');
+	if [[ ${#temp} == '0' ]];
+	then
+		echo "Задача контроля процесса не запущена.";
+		rm ~/crontab.tmp;
+		exit 1;
+	fi
+	cat ~/crontab.tmp | sed -n '/#lab4scan/,+1p' 1> ~/temp_lab4.tmp;
+	while [[ $(cat ~/temp_lab4.tmp | grep "#lab4scan") != '' ]]; do
+		metka="$(cat ~/temp_lab4.tmp | head -n 1)";
+		temp=$(cat ~/temp_lab4.tmp | head -n 2 | tail -n 1);
+		sed -i '1,2 d' ~/temp_lab4.tmp;
+		metka="${metka:10:$((${#metka}-11))}";
+		echo "Метка: $metka";
+		length=${#temp};
+		countera=0;
+		counterb=0;
+		pos=0;
+		for (( countera; countera<$length; countera++ )); do
+			if [[ ${temp:$countera:1} == ' ' ]]; then
+				pole[$counterb]=${temp:$pos:$(($countera-$pos))};
+				pos=$countera;
+				counterb=$(($counterb+1));
+			fi
+		done
+		for (( countera=0; countera<counterb; countera++ )); do
+			if [[ "${pole[$countera]:0:1}" == ' ' ]]; then
+				pole[$countera]=${pole[$countera]:1:$((${#pole[$countera]}-1))};
+			fi
+			if [[ $countera -eq "0" ]]; then
+				if [[ ${#pole[$countera]} -ne 1 ]]; then
+					minutes="Каждые ${pole[$countera]:2:$((${#pole[$countera]}-2))}"' [минут]';
+				else
+				minutes="Каждая минута";
+				fi
+			elif [[ $countera -eq "1" ]]; then
+				if [[ ${#pole[$countera]} -ne 1 ]]; then
+					hours="Каждые ${pole[$countera]:2:$((${#pole[$countera]}-2))}"' [часов]';
+				else
+					hours="Каждый час";
+				fi
+			fi
+		done
+	printf "Интервал минут: $minutes\nИнтервал часов: $hours\nПользователь: ${pole[6]}\n\n";
+	done
+	
+	rm ~/temp_lab4.tmp
+	rm ~/crontab.tmp;
+;;
+0)
+	echo 'Выход...';
+;;
+*)
+	echo 'Неверный выбор! Выход...';
+;;
+esac
+else
+	user=$1;
+	if [[ $2 == 'scan' ]]
+	then
+		source /home/$user/lab4.cfg
+		tmp=$(ps -o cmd --pid ${pid[$3]} | grep ${name[$3]});
+		if [[ ${#tmp} == '0' ]]
+		then
+			echo "DISPLAY=:0 ${command[$3]} &">/home/$user/tmp_run;
+			echo "sed s/${pid[$3]}/"'$!'"/ /home/$user/lab4.cfg 1> /home/$user/c.tmp 2>> /home/$user/lab4.log">>/home/$user/tmp_run;
+			echo "rm /home/$user/lab4.cfg">>/home/$user/tmp_run;
+			echo "mv /home/$user/c.tmp /home/$user/lab4.cfg">>/home/$user/tmp_run;
+			echo 'echo "$(date) : Программа не запущена, новый pid $!" >> /home/'"$user"'/lab4.log'>>/home/$user/tmp_run;
+			echo "/bin/bash /home/$user/tmp_run">/home/$user/run.sh;
+			echo "rm /home/$user/run.sh">>/home/$user/run.sh;
+			echo "rm /home/$user/tmp_run">>/home/$user/run.sh;
+			at -f /home/$user/run.sh now
+		else
+			echo "$(date) : Программа ${name[$3]} продолжает работу" >> /home/$user/lab4.log;
+		fi
+	fi
+fi

@@ -1,0 +1,137 @@
+#!/bin/bash
+
+directory=$(pwd);
+rm $directory/temp_tab;
+crontab -l 2> /dev/null 1> $directory/temp_tab;
+
+clear;
+echo "Во сколько минут запустить vlc?"
+echo "0-59"
+echo "Введите значение: "; read minutes;
+if [ $minutes -eq $minutes 2> /dev/null ];
+then
+if [ "$minutes" -ge 0 ];
+then
+if [ "$minutes" -le 59 ];
+then
+echo success;
+else
+echo 'Число больше 59';
+exit 1;
+fi
+else 'Число меньше 0';
+exit 1;
+fi
+elif [ "*" = "$minutes" ];
+then
+echo success;
+else
+echo 'Введены буквы';
+exit 1;
+fi
+clear;
+echo "Во сколько часов запустить vlc?"
+echo "0-23"
+echo "Введите значение: "; read hours;
+if [ $hours -eq $hours 2> /dev/null ];
+then
+if [ "$hours" -ge 0 ];
+then
+if [ "$hours" -le 23 ];
+then
+echo success;
+else
+echo 'Число больше 23';
+exit 1;
+fi
+else 'Число меньше 0';
+exit 1;
+fi
+elif [ "*" = "$hours" ];
+then
+echo success;
+else
+echo 'Введены буквы';
+exit 1;
+fi
+clear;
+echo "В какой день месяца запустить vlc?"
+echo "1-31"
+echo "Введите значение: "; read daymounths;
+if [ $daymounths -eq $daymounths 2> /dev/null ];
+then
+if [ "$daymounths" -ge 1 ];
+then
+if [ "$daymounths" -le 31 ];
+then
+echo success;
+else
+echo 'Число больше 31';
+exit 1;
+fi
+else 'Число меньше 1';
+exit 1;
+fi
+elif [ "*" = "$daymounths" ];
+then
+echo success;
+else
+echo 'Введены буквы';
+exit 1;
+fi
+clear;
+echo "В каком месяце запустить vlc?"
+echo "1-12"
+echo "Введите значение: "; read mounts;
+if [ $mounts -eq $mounts 2> /dev/null ];
+then
+if [ "$mounts" -ge 1 ];
+then
+if [ "$mounts" -le 12 ];
+then
+echo success;
+else
+echo 'Число больше 12';
+exit 1;
+fi
+else 'Число меньше 1';
+exit 1;
+fi
+elif [ "*" = "$mounts" ];
+then
+echo success;
+else
+echo 'Введены буквы';
+exit 1;
+fi
+clear;
+echo "В какие дни недели запустить vlc?"
+echo "1-7"
+echo "Введите значение: "; read dayned;
+if [ $dayned -eq $dayned 2> /dev/null ];
+then
+if [ "$dayned" -ge 0 ];
+then
+if [ "$dayned" -le 6 ];
+then
+echo success;
+else
+echo 'Число больше 6';
+exit 1;
+fi
+else 'Число меньше 0';
+exit 1;
+fi
+elif [ "*" = "$dayned" ];
+then
+echo success;
+else
+echo 'Введены буквы';
+exit 1;
+fi
+clear;
+
+echo "$minutes $hours $daymounths $mounts $dayned DISPLAY=:0 /usr/bin/vlc" >> $directory/temp_tab;
+
+cat $directory/temp_tab;
+crontab $directory/temp_tab;
