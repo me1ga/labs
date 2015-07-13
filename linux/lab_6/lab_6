@@ -77,12 +77,104 @@ case $y in
 	done
 ;;
 esac
+clear;
+fstr=$(cat $string | head -n 1);
+fstr=${fstr:0:16};
+c=0;
+if [[ ${fstr:3:1} == ' ' && ${fstr:6:1} == ' ' && ${fstr:15:1} == ' ' ]]; then
+	if [[ ${fstr:9:1} == ':' && ${fstr:12:1} == ':' ]]; then
+		stringhead=$(cat $string | head -n 1);
+		stringtail=$(cat $string | tail -n 1);
+		monthStr[0]=${stringhead:0:3};
+		monthStr[1]=${stringtail:0:3};
+		day[0]=${stringhead:4:2};
+		day[1]=${stringtail:4:2};
+		hour[0]=${stringhead:7:2};
+		hour[1]=${stringtail:7:2};
+		minutes[0]=${stringhead:10:2};
+		minutes[1]=${stringtail:10:2};
+		if [[ ${day[0]:0:1} == ' ' ]]; then
+			day[0]=${day[0]:1:1};
+		fi
+		if [[ ${day[1]:0:1} == ' ' ]]; then
+			day[1]=${day[1]:1:1};
+		fi
+		c=1;
+	fi
+fi
 
+if [[ $c -eq 1 ]]; then
+	c=4;
+	while [[ $c -ne 0 ]]; do
+		clear;
+		printf "Удача.\n\n";
+		printf "Начало документа: ${day[0]}-${monthStr[0]}_${hour[0]}:${minutes[0]}\n";
+		printf "Конец документа: ${day[1]}-${monthStr[1]}_${hour[1]}:${minutes[1]}\n";
+		printf "\nВыберите диапазон времени из которого отобразить логи.\n"
 
+		printf "\nС какого времени выводить логи?\nЧасы: ";
+		read hour[2];
+		printf "Минуты: ";
+		read minutes[2];
+		printf "До какого времени выводить логи?\nЧасы: ";
+		read hour[3];
+		printf "Минуты: ";
+		read minutes[3];
 
+		day[2]=${day[0]};
+		day[2]=${day[0]};
 
+		#if [[ ${monthStr[0]} == ${monthStr[1]} ]]; then
+			monthStr[2]=${monthStr[0]};
+			monthStr[3]=${monthStr[0]};
+		#fi
+		c=0;
+		clear;
+	done
+fi
+cp "$string" /tmp/lab_6.log.np;
+printf "" > /tmp/lab_6.log.p;
+while [[ $c -ne 2 ]]; do
+	tmpstr=$(cat /tmp/lab_6.log.np | head -n 1);
+	sed -i '1 d' /tmp/lab_6.log.np;
+	tmpmonth=${tmpstr:0:3};
+	tmpday=${tmpstr:4:2};
+	if [[ ${tmpday:0:1} == ' ' ]]; then
+		tmpday=${tmpday:1:1};
+	fi
+	tmphour=${tmpstr:7:2};
+	if [[ ${tmphour:0:1} == '0' ]]; then
+		tmphour=${tmphour:1:1};
+	fi
+	tmpminutes=${tmpstr:10:2};
+	if [[ ${tmpminutes:0:1} == '0' ]]; then
+		tmpminutes=${tmpminutes:1:1};
+	fi
+	#TEMPORARY__________________________________________________________________________________________________
+	if (( $tmphour == ${hour[2]} && $tmphour < ${hour[3]} )); then
+		if (( $tmpminutes >= ${minutes[2]} )); then
+			echo "$tmpstr" >> /tmp/lab_6.log.p;
+		fi
+	fi
+	if (( $tmphour > ${hour[2]} && $tmphour < ${hour[3]} )); then
+		echo "$tmpstr" >> /tmp/lab_6.log.p;
+	fi
+	if (( $tmphour > ${hour[2]} && $tmphour == ${hour[3]} )); then
+		if (( $tmpminutes <= ${minutes[3]} )); then
+			echo "$tmpstr" >> /tmp/lab_6.log.p;
+		fi
+	fi
+	if (( $tmphour == ${hour[2]} && $tmphour == ${hour[3]} )); then
+		if (( $tmpminutes >= ${minutes[2]} && $tmpminutes <= ${minutes[3]} )); then
+			echo "$tmpstr" >> /tmp/lab_6.log.p;
+		fi
+	fi
+	if (( $tmphour >= ${hour[3]} && $tmpminutes > ${minutes[3]} )); then
+		break;
+	fi
+done
 
-
-
+clear;
+cat /tmp/lab_6.log.p;
 
 #less "$string"
