@@ -1,33 +1,88 @@
 #!/bin/bash
 
+trap bashtrap INT
+clear;
+bashtrap()
+{
+    printf "\nCTRL+C Detected !...executing bash trap !\n";
+    exit -1;
+}
+
 clear;
 printf "Поиск LOG файлов.\n";
 printf "Введите название программы: ";
 read name;
 printf "Поиск логов...\n";
-find /var/log -maxdepth 1 -name "$name*" | sort > /tmp/lab_6.tmp;
+find /var/log -maxdepth 1 -type f -name "$name*" | sort > /tmp/lab_6.tmp;
 strqty=$(wc -l /tmp/lab_6.tmp | sed 's/[^ ]//2g' | sed 's/[ ^t]*$//');
-if [[ "$strqty" -eq "0" ]]; then
-	printf "Логи для программы не найдены! Выход...\n";
-	exit -1;
+y=1;
+if [[ "$strqty" -eq 0 ]]; then
+	find /var/log -maxdepth 1 -type d -name "$name*" | sort > /tmp/lab_6.tmp;
+	strqty=$(wc -l /tmp/lab_6.tmp | sed 's/[^ ]//2g' | sed 's/[ ^t]*$//');
+	if [[ "$strqty" -eq 0 ]]; then
+		printf "Логи для программы не найдены! Выход...\n";
+		exit -1;
+	else
+		y=2;
+	fi
 fi
 z=0;
-while [[ $z -eq 0 ]]; do
-	printf "Логи найдены, какой открыть?\n";
-	counter=0;
-	for (( counter; counter<strqty; counter++ )); do
-		string=$(cat /tmp/lab_6.tmp | head -n $(($counter+1)) | tail -n 1); 
-		printf "$counter) $string\n";
+case $y in
+1)
+	while [[ $z -eq 0 ]]; do
+		printf "Логи найдены, какой открыть?\n";
+		counter=0;
+		for (( counter; counter<strqty; counter++ )); do
+			string=$(cat /tmp/lab_6.tmp | head -n $(($counter+1)) | tail -n 1); 
+			printf "$counter) $string\n";
+		done
+		printf "Ввод: ";
+		read num;
+		string=$(cat /tmp/lab_6.tmp | head -n $(($num+1)) | tail -n 1);
+		if [[ ${string:$((${#string}-3)):3} == '.gz' ]]; then
+			gunzip -c $string > /tmp/lab_6.log.tmp;
+			string='/tmp/lab_6.log.tmp';
+			z=1;
+		else
+			z=1;
+		fi
 	done
-	printf "Ввод: ";
-	read num;
-	string=$(cat /tmp/lab_6.tmp | head -n $(($num+1)) | tail -n 1);
-	if [[ ${string:$((${#string}-3)):3} == '.gz' ]]; then
-		gunzip -c > /tmp/lab_6.log.tmp;
-		string='/tmp/lab_6.log.tmp';
-		z=1;
-	else
-		z=1;
-	fi
-done
-cat "$string" | head -n 10;
+;;
+2)
+	while [[ $z -eq 0 ]]; do
+		printf "Найдена папка программы для логов.\n";
+		printf "Поиск логов...\n";
+		string=$(cat /tmp/lab_6.tmp | head -n 1);
+		find "$string" -maxdepth 1 -type f | sort > /tmp/lab_6.tmp;
+		strqty=$(find $string -maxdepth 1 -type f | wc -l | sed 's/[^0-9]//2g' | sed 's/[ ^t]*$//');
+		if [[ "$strqty" -eq 0 ]]; then
+			printf "Логи для программы не найдены! Выход...\n";
+			exit -1;
+		fi
+		counter=0;
+		for (( counter; counter<strqty; counter++ )); do
+			string=$(cat /tmp/lab_6.tmp | head -n $(($counter+1)) | tail -n 1); 
+			printf "$counter) ${string}\n";
+		done
+		printf "Ввод: ";
+		read num;
+		string=$(cat /tmp/lab_6.tmp | head -n $(($num+1)) | tail -n 1);
+		if [[ ${string:$((${#string}-3)):3} == '.gz' ]]; then
+			gunzip -c $string > /tmp/lab_6.log.tmp;
+			string='/tmp/lab_6.log.tmp';
+			z=1;
+		else
+			z=1;
+		fi
+	done
+;;
+esac
+
+
+
+
+
+
+
+
+#less "$string"
