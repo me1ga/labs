@@ -10,38 +10,73 @@
 #include <sys/ipc.h>
 #include <string.h>
 
-#include "func.h"
-//#include "func.c"
+#include "structures.h"
+#include "func.c"
 
-//#define CR_MSGQ ( 0660 | IPC_CREAT )
+#define CR_MSGQ ( 0666 | IPC_CREAT )
 
-int main(/*int argc, char const *argv[]*/){
+int main(int argc, char const *argv[]){
 	/* Инициализация переменных */
 	key_t token;
-	int msgq_id;
+	int msgq_id=0, sel=0, result=0;
 	struct m_buf buffer;
+	char buf[4096];
 	char command[5], 
 		while_exit[5] = {'e', 'x', 'i', 't', 0},
 		while_send[5] = {'s', 'e', 'n', 'd', 0},
 		while_recv[5] = {'r', 'e', 'c', 'v', 0};
 
 	/* Создание очереди */
-	/*token = ftok(".", 'X');
+	token = ftok("sss", 1);
 	msgq_id = msgget(token, CR_MSGQ);
 	if ( msgq_id == -1 ){
 		perror("msgget");
 		return 0;
-	}*/
+	}
 
 	/* Тело программы */
 	do{
+		printf("Ввдите команду: ");
 		fgets(command, 5, stdin);
-		if((strncmp(command, while_send, 5)) == 0) printf("send message\n");
-		if((strncmp(command, while_recv, 5)) == 0) printf("receive message\n");
-	}while( (strncmp(command, while_exit, 5)) != 0 );
+		fgets(buf, 4096, stdin);
+		if((strncmp(command, while_send, 5)) == 0) sel=1;
+		if((strncmp(command, while_recv, 5)) == 0) sel=2;
+		if((strncmp(command, while_exit, 5)) == 0) sel=3;
+		if(sel != 1 && sel != 2 && sel != 3) sel=4;
+
+		switch(sel){
+			case 1:
+				printf("Отправить сообщение: ");
+				fgets(buffer.data.message, 1024, stdin);
+				buffer.mtype=1;
+				result = send_message(msgq_id, &buffer);
+				if (result == -1){
+					perror("\nsend_message");
+					sel=3;
+				}else{
+					sel=0;
+				}
+			break;
+			case 2:
+				result = recv_message(msgq_id, 0, &buffer);
+				if (result == -1){
+					perror("\nrecv_message");
+					sel=0;
+				}else{
+					sel=0;
+				}
+				printf("Входящее сообщение: %s", buffer.data.message);
+			break;
+			case 3:
+			break;
+			case 4:
+				printf("Неправильная команда.\n");
+			break;
+		}
+	}while( sel != 3 );
 
 	/* Удаление очереди */
-	//msgctl(msgq_id, IPC_RMID, 0);
+	msgctl(msgq_id, IPC_RMID, 0);
 
 	return 0;
 }
