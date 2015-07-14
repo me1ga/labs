@@ -10,15 +10,8 @@
 extern "C" {
 #endif
 
-struct m_data{
-	char login[8];
-//	char password[8];
-	char message[1024];
-};
-struct m_buf{
-	long mtype; /* Тип сообщения */
-	struct m_data data; /* Пользовательские данные */
-};
+int send_message(int qid, struct m_buf *buffer);
+int recv_message(int qid, long type, struct m_buf *buffer);
 
 #ifdef  __cplusplus
 }
