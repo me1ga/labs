@@ -1,0 +1,207 @@
+#!/bin/bash
+
+clear;
+printf "Введите IP адрес: ";
+read ip;
+printf "Введите маску подсети: ";
+read mpods;
+
+#Разделение на части
+
+z=0;
+c=0;
+for (( i = 0; i < 15; i++ )); do
+	if [[ ${ip:i:1} == '.' ]]; then
+		ipaddr[$c]=${ip:$z:$(($i-$z))};
+		z=$(($i+1));
+		c=$(($c+1));
+	fi
+	if [[ $c -eq 3 ]]; then
+		ipaddr[$c]=${ip:$z:$((${#ip}-$z))};
+	fi
+done
+z=0;
+c=0;
+for (( i = 0; i < 15; i++ )); do
+	if [[ ${mpods:i:1} == '.' ]]; then
+		mask[$c]=${mpods:$z:$(($i-$z))};
+		z=$(($i+1));
+		c=$(($c+1));
+	fi
+	if [[ $c -eq 3 ]]; then
+		mask[$c]=${mpods:$z:$((${#mpods}-$z))};
+	fi
+done
+
+#Вычисление
+
+mask_dv[0]=$(printf "obase=2\n${mask[0]}\n" | bc);
+mask_dv[1]=$(printf "obase=2\n${mask[1]}\n" | bc);
+mask_dv[2]=$(printf "obase=2\n${mask[2]}\n" | bc);
+mask_dv[3]=$(printf "obase=2\n${mask[3]}\n" | bc);
+z=0;
+for (( c = 0; c < 4; c++ )); do
+	if [[ ${#mask_dv[$c]} -ne 8 ]]; then
+		z=$((8-${#mask_dv[$c]}))
+		for (( i = 0; i < $z; i++ )); do
+			mask_dv[$c]="0${mask_dv[$c]}"
+		done
+	fi
+done
+ipaddr_dv[0]=$(printf "obase=2\n${ipaddr[0]}\n" | bc);
+ipaddr_dv[1]=$(printf "obase=2\n${ipaddr[1]}\n" | bc);
+ipaddr_dv[2]=$(printf "obase=2\n${ipaddr[2]}\n" | bc);
+ipaddr_dv[3]=$(printf "obase=2\n${ipaddr[3]}\n" | bc);
+z=0;
+for (( c = 0; c < 4; c++ )); do
+	if [[ ${#ipaddr_dv[$c]} -ne 8 ]]; then
+		z=$((8-${#ipaddr_dv[$c]}))
+		for (( i = 0; i < $z; i++ )); do
+			ipaddr_dv[$c]="0${ipaddr_dv[$c]}"
+		done
+	fi
+done
+mask_dv[4]="${mask_dv[0]}${mask_dv[1]}${mask_dv[2]}${mask_dv[3]}"
+z=0;
+for (( i = 0; i < 35; i++ )); do
+	if [[ ${mask_dv[4]:$i:1} -ne 1 && $z -eq 0 ]]; then
+		prefix=$i;
+		z=1;
+	fi
+	if [[ $z -eq 1 && ${mask_dv[4]:$i:1} -ne 0 ]]; then
+		printf 'Неправильно введена маска подсети!';
+		exit -1;
+	fi
+done
+wc_mask_dv[0]='';
+wc_mask_dv[1]='';
+wc_mask_dv[2]='';
+wc_mask_dv[3]='';
+for (( i = 0; i < 4; i++ )); do
+	for (( z = 0; z < 8; z++ )); do
+		if [[ ${mask_dv[$i]:$z:1} -eq 0 ]]; then
+			wc_mask_dv[$i]="${wc_mask_dv[$i]}1";
+		else
+			wc_mask_dv[$i]="${wc_mask_dv[$i]}0";
+		fi
+	done
+done
+wc_mask[0]=$(printf "ibase=2\n${wc_mask_dv[0]}\n" | bc);
+wc_mask[1]=$(printf "ibase=2\n${wc_mask_dv[1]}\n" | bc);
+wc_mask[2]=$(printf "ibase=2\n${wc_mask_dv[2]}\n" | bc);
+wc_mask[3]=$(printf "ibase=2\n${wc_mask_dv[3]}\n" | bc);
+ip_addr_s_dv[0]='';
+ip_addr_s_dv[1]='';
+ip_addr_s_dv[2]='';
+ip_addr_s_dv[3]='';
+for (( i = 0; i < 4; i++ )); do
+	for (( z = 0; z < 8; z++ )); do
+		if [[ ${mask_dv[$i]:$z:1} -eq 1 ]]; then
+			ip_addr_s_dv[$i]="${ip_addr_s_dv[$i]}${ipaddr_dv[$i]:$z:1}";
+		else
+			ip_addr_s_dv[$i]="${ip_addr_s_dv[$i]}0";
+		fi
+	done
+done
+ip_addr_s[0]=$(printf "ibase=2\n${ip_addr_s_dv[0]}\n" | bc);
+ip_addr_s[1]=$(printf "ibase=2\n${ip_addr_s_dv[1]}\n" | bc);
+ip_addr_s[2]=$(printf "ibase=2\n${ip_addr_s_dv[2]}\n" | bc);
+ip_addr_s[3]=$(printf "ibase=2\n${ip_addr_s_dv[3]}\n" | bc);
+broadcast_dv[0]='';
+broadcast_dv[1]='';
+broadcast_dv[2]='';
+broadcast_dv[3]='';
+for (( i = 0; i < 4; i++ )); do
+	for (( z = 0; z < 8; z++ )); do
+		if [[ ${mask_dv[$i]:$z:1} -eq 1 ]]; then
+			broadcast_dv[$i]="${broadcast_dv[$i]}${ipaddr_dv[$i]:$z:1}";
+		else
+			broadcast_dv[$i]="${broadcast_dv[$i]}1";
+		fi
+	done
+done
+broadcast[0]=$(printf "ibase=2\n${broadcast_dv[0]}\n" | bc);
+broadcast[1]=$(printf "ibase=2\n${broadcast_dv[1]}\n" | bc);
+broadcast[2]=$(printf "ibase=2\n${broadcast_dv[2]}\n" | bc);
+broadcast[3]=$(printf "ibase=2\n${broadcast_dv[3]}\n" | bc);
+if [[ $prefix -gt 30 ]]; then
+	first_ip_dv[0]='--------';
+	first_ip_dv[1]='--------';
+	first_ip_dv[2]='--------';
+	first_ip_dv[3]='--------';
+	last_ip_dv[0]='--------';
+	last_ip_dv[1]='--------';
+	last_ip_dv[2]='--------';
+	last_ip_dv[3]='--------';
+	first_ip[0]='---';
+	first_ip[1]='---';
+	first_ip[2]='---';
+	first_ip[3]='---';
+	last_ip[0]='---';
+	last_ip[1]='---';
+	last_ip[2]='---';
+	last_ip[3]='---';
+else
+	first_ip_dv[0]='';
+	first_ip_dv[1]='';
+	first_ip_dv[2]='';
+	first_ip_dv[3]='';
+	c=0;
+	for (( i = 0; i < 4; i++ )); do
+		for (( z = 0; z < 8; z++ )); do
+			if [[ ${mask_dv[$i]:$z:1} -eq 1 ]]; then
+				first_ip_dv[$i]="${first_ip_dv[$i]}${ipaddr_dv[$i]:$z:1}";
+			elif [[ $c -ge $prefix && $c -lt 31 ]]; then
+				first_ip_dv[$i]="${first_ip_dv[$i]}0";
+			else
+				first_ip_dv[$i]="${first_ip_dv[$i]}1";
+			fi
+			c=$(($c+1));
+		done
+	done
+	first_ip[0]=$(printf "ibase=2\n${first_ip_dv[0]}\n" | bc);
+	first_ip[1]=$(printf "ibase=2\n${first_ip_dv[1]}\n" | bc);
+	first_ip[2]=$(printf "ibase=2\n${first_ip_dv[2]}\n" | bc);
+	first_ip[3]=$(printf "ibase=2\n${first_ip_dv[3]}\n" | bc);
+	last_ip_dv[0]='';
+	last_ip_dv[1]='';
+	last_ip_dv[2]='';
+	last_ip_dv[3]='';
+	c=0;
+	for (( i = 0; i < 4; i++ )); do
+		for (( z = 0; z < 8; z++ )); do
+			if [[ ${mask_dv[$i]:$z:1} -eq 1 ]]; then
+				last_ip_dv[$i]="${last_ip_dv[$i]}${ipaddr_dv[$i]:$z:1}";
+			elif [[ $c -ge $prefix && $c -lt 31 ]]; then
+				last_ip_dv[$i]="${last_ip_dv[$i]}1";
+			else
+				last_ip_dv[$i]="${last_ip_dv[$i]}0";
+			fi
+			c=$(($c+1));
+		done
+	done
+	last_ip[0]=$(printf "ibase=2\n${last_ip_dv[0]}\n" | bc);
+	last_ip[1]=$(printf "ibase=2\n${last_ip_dv[1]}\n" | bc);
+	last_ip[2]=$(printf "ibase=2\n${last_ip_dv[2]}\n" | bc);
+	last_ip[3]=$(printf "ibase=2\n${last_ip_dv[3]}\n" | bc);
+fi
+if [[ $prefix -eq 32 ]]; then
+	ipqty[0]=0;
+	ipqty[1]=0;
+else
+	ipqty[0]=$(printf "2^(32-$prefix)\n" | bc);
+	ipqty[1]=$(printf "${ipqty[0]}-2\n" | bc);
+fi
+
+#Вывод информации
+
+clear
+printf 'IP адрес      |'" ${ipaddr_dv[0]} ${ipaddr_dv[1]} ${ipaddr_dv[2]} ${ipaddr_dv[3]} | ${ipaddr[0]}.${ipaddr[1]}.${ipaddr[2]}.${ipaddr[3]}/$prefix\n";
+printf 'Маска подсети |'" ${mask_dv[0]} ${mask_dv[1]} ${mask_dv[2]} ${mask_dv[3]} | ${mask[0]}.${mask[1]}.${mask[2]}.${mask[3]}\n";
+printf 'Wildcard mask |'" ${wc_mask_dv[0]} ${wc_mask_dv[1]} ${wc_mask_dv[2]} ${wc_mask_dv[3]} | ${wc_mask[0]}.${wc_mask[1]}.${wc_mask[2]}.${wc_mask[3]}\n";
+printf 'IP адрес сети |'" ${ip_addr_s_dv[0]} ${ip_addr_s_dv[1]} ${ip_addr_s_dv[2]} ${ip_addr_s_dv[3]} | ${ip_addr_s[0]}.${ip_addr_s[1]}.${ip_addr_s[2]}.${ip_addr_s[3]}\n";
+printf 'Broadcast IP  |'" ${broadcast_dv[0]} ${broadcast_dv[1]} ${broadcast_dv[2]} ${broadcast_dv[3]} | ${broadcast[0]}.${broadcast[1]}.${broadcast[2]}.${broadcast[3]}\n";
+printf 'First IP      |'" ${first_ip_dv[0]} ${first_ip_dv[1]} ${first_ip_dv[2]} ${first_ip_dv[3]} | ${first_ip[0]}.${first_ip[1]}.${first_ip[2]}.${first_ip[3]}\n";
+printf 'Last IP       |'" ${last_ip_dv[0]} ${last_ip_dv[1]} ${last_ip_dv[2]} ${last_ip_dv[3]} | ${last_ip[0]}.${last_ip[1]}.${last_ip[2]}.${last_ip[3]}\n";
+printf "Количество адресов в порции хоста: ${ipqty[0]}\n";
+printf "Количество рабочих адресов для хостов: ${ipqty[1]}\n";

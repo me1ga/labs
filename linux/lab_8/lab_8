@@ -1,0 +1,107 @@
+#!/bin/bash
+
+if [[ $1 == 'start' ]]; then
+	printf '.<-<-<-<-<-<-<-<-<-<-старт->->->->->->->->->->.'"\n" >> /home/mega/file.log;
+fi
+tmpstr=$(mount | grep "/home/mega/123 ");
+c=0;
+if [[ $tmpstr == '' ]]; then
+	c=3;
+fi
+i=0;
+while [[ $c -eq 0 ]]; do
+	if [[ ${tmpstr:$i:5} == ' on /' && ${tmpstr:$(($i+${#1}+5)):8} == 'type nfs' ]]; then
+		c=2;
+		break;
+	fi
+	i=$(($i+1));
+	if [[ $i -ge ${#tmpstr} ]]; then
+		break;
+		c=1;
+	fi
+done
+if [[ $c -eq 3 ]]; then
+	#fsfsfsfsfsfsf#######################################################################################
+	if [[ $1 == 'start' ]]; then
+		echo "Не смонтирован" >> /home/mega/file.log;
+		echo "Для монтирования папки необходимы права администратора" >> /home/mega/file.log;
+		# mount -t nfs -o ro,soft,intr 192.168.0.156:/home/mega/LABS /home/mega/123;
+		echo "ЭМУЛЯЦИЯ Монтирование" >> /home/mega/file.log;
+	fi
+	#fsfsfsfsfsfsf#######################################################################################
+	if [[ $1 == 'stop' ]]; then
+		printf '.->->->->->->->->->->стоп<-<-<-<-<-<-<-<-<-<-.'"\n" >> /home/mega/file.log;
+		eth0=$(ifconfig eth0 | grep "inet addr:");
+		if [[ $eth0 != '' ]]; then
+			d=0;
+			while [[ $d -eq 0 ]]; do
+				eth0="${eth0:1:$((${#eth0}-1))}";
+				if [[ ${eth0:0:1} == ':' ]]; then
+					eth0="${eth0:1:$((${#eth0}-1))}";
+					d=1;
+				fi
+				if [[ ${#eth0} -lt 4 ]]; then
+					break;
+					d=2;
+				fi
+			done
+			i=0;
+			while [[ $d -eq 1 ]]; do
+				if [[ ${eth0:$i:1} == ' ' ]]; then
+					eth0="${eth0:0:$i}";
+					d=3;
+				fi
+				i=$(($i+1));
+			done
+			echo "Адрес eth0: $eth0" >> /home/mega/file.log;
+		fi
+		wlan0=$(ifconfig wlan0 | grep "inet addr:");
+		if [[ $wlan0 != '' ]]; then
+			d=0;
+			while [[ $d -eq 0 ]]; do
+				wlan0="${wlan0:1:$((${#wlan0}-1))}";
+				if [[ ${wlan0:0:1} == ':' ]]; then
+					wlan0="${wlan0:1:$((${#wlan0}-1))}";
+					d=1;
+				fi
+				if [[ ${#wlan0} -lt 4 ]]; then
+					break;
+					d=2;
+				fi
+			done
+			i=0;
+			while [[ $d -eq 1 ]]; do
+				if [[ ${wlan0:$i:1} == ' ' ]]; then
+					wlan0="${wlan0:0:$i}";
+					d=3;
+				fi
+				i=$(($i+1));
+			done
+			echo "Адрес wlan0: $wlan0" >> /home/mega/file.log;
+		fi
+	fi
+	#fsfsfsfsfsfsf#######################################################################################
+	if [[ $1 == 'stop' ]]; then
+		starttime=$(uptime -s);
+		stoptime=$(date +"%G-%m-%d %X");
+		uptm=$(uptime -p);
+		echo "Система запущена: $starttime" >> /home/mega/file.log;
+		echo "Система завершает работу: $stoptime" >> /home/mega/file.log;
+		echo "Время работы: $uptm" >> /home/mega/file.log;
+		printf "\n" >> /home/mega/file.log;
+	fi
+	#fsfsfsfsfsfsf#######################################################################################
+fi
+if [[ $c -eq 1 ]]; then
+	echo "Ошибка" >> /home/mega/file.log;
+fi
+if [[ $c -eq 2 ]]; then
+	echo "OK!" >> /home/mega/file.log;
+fi
+
+if [[ $1 == 'lo' ]]; then
+	printf "$USER logout...\n" >> /home/mega/file.log;
+fi
+if [[ $1 == 'li' ]]; then
+	printf "$USER login...\n" >> /home/mega/file.log;
+fi

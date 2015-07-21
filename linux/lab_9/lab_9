@@ -1,0 +1,148 @@
+#!/bin/bash
+
+if [[ ${#} -eq 0 ]]; then
+	path=$(pwd);
+	clear;
+	echo '1) Создать задачу резервного копирования';
+	echo '2) Просмотреть задачи резервного копирования';
+	echo '3) Удалить задачу резервного копирования';
+	echo '0) Выход';
+	printf 'Выберите пункт: ';
+	read -n 1 vybor;
+	echo "";
+	case $vybor in
+	1)
+		printf "Введите путь до папки которую сохранять в резервную копию: ";
+		read inpath;
+		if [[ $(ls -a $inpath 2>&1 | head -n 1) == "ls: невозможно получить доступ к $inpath: Нет такого файла или каталога" ]]; then
+			echo "Указанного пути не существует!";
+			exit 0;
+		else
+			echo "Ok";
+		fi
+		printf "Введите путь куда складывать резервные копии: ";
+		read outpath;
+		if [[ $(ls -a $outpath 2>&1 | head -n 1) == "ls: невозможно получить доступ к $outpath: Нет такого файла или каталога" ]]; then
+			echo "Указанного пути не существует!";
+			exit 0;
+		else
+			echo "Ok";
+		fi
+		printf "Введите имя конфига: ";
+		read config;
+		echo "Сохранение..."
+		echo "inpath=$inpath" > $path/$config;
+		echo "outpath=$outpath" >> $path/$config;
+		echo "config=$config" >> $path/$config;
+		echo "Сохранено в $config"
+		crontab -l 1> crontab.tmp 2> /dev/null;
+		printf "#lab9tar_""$config""_\n* * * * * $path/lab_9 backup $path/$config\n" >> crontab.tmp;
+		crontab crontab.tmp;
+		rm crontab.tmp;
+	;;
+	2)
+		crontab -l 1> crontab.tmp 2> /dev/null;
+		temp=$(cat crontab.tmp | grep '#lab9tar_');
+		if [[ ${#temp} == '0' ]];
+		then
+			echo "Задачи резервного копирования не созданы!";
+			rm crontab.tmp;
+			exit 0;
+		fi
+		cat crontab.tmp | sed -n '/#lab9tar_/,+1p' 1> temp_lab9.tmp;
+		while [[ $(cat temp_lab9.tmp | grep "#lab9tar_") != '' ]]; do
+			config="$(cat temp_lab9.tmp | head -n 1)";
+			config=${config:9:$((${#config}-10))};
+			temp=$(cat temp_lab9.tmp | head -n 2 | tail -n 1);
+			sed -i '1,2 d' temp_lab9.tmp;
+			length=${#temp};
+			a=0;
+			b=0;
+			pos=0;
+			for (( a; a<$length; a++ )); do
+				if [[ ${temp:$a:1} == ' ' ]]; then
+					pole[$b]=${temp:$pos:$(($a-$pos))};
+					pos=$a;
+					b=$(($b+1));
+				fi
+			done
+			for (( a=0; a<b; a++ )); do
+				if [[ "${pole[$a]:0:1}" == ' ' ]]; then
+					pole[$a]=${pole[$a]:1:$((${#pole[$a]}-1))};
+				fi
+				if [[ $a -eq "0" ]]; then
+					if [[ ${#pole[$a]} -ne 1 ]]; then
+						minutes="Каждые ${pole[$a]:2:$((${#pole[$a]}-2))}"' [минут]';
+					else
+						minutes="Каждая минута";
+					fi
+				elif [[ $a -eq "1" ]]; then
+					if [[ ${#pole[$a]} -ne 1 ]]; then
+						hours="Каждые ${pole[$a]:2:$((${#pole[$a]}-2))}"' [часов]';
+					else
+						hours="Каждый час";
+					fi
+				fi
+			done
+			echo "Конфиг: $config";
+			echo "Интервал минут: $minutes";
+			echo "Интервал часов: $hours";
+			echo "";
+		done
+		
+		rm temp_lab9.tmp
+		rm crontab.tmp;
+	;;
+	3)
+		crontab -l 1> crontab.tmp 2> /dev/null;
+		temp=$(cat crontab.tmp | grep '#lab9tar_');
+		if [[ ${#temp} == '0' ]]; then
+			echo "Задачи резервного копирования не созданы!";
+			rm crontab.tmp;
+		else
+			cat crontab.tmp | sed -n '/#lab9tar_/p' 1> temp_lab9.tmp;
+			counter=0;
+			while [[ $(cat temp_lab9.tmp | grep "#lab9tar_") != '' ]]; do
+				config[$counter]="$(cat temp_lab9.tmp | head -n 1)";
+				sed -i '1 d' temp_lab9.tmp;
+				configz[$counter]="${config[$counter]:9:$((${#config[$counter]}-10))}";
+				echo "$counter) ${configz[$counter]}";
+				counter=$(($counter+1));
+			done
+			read z;
+			if [[ $z -eq $z ]]; then
+				if (( $z>=0 && $z<=$counter )); then
+					cat crontab.tmp | sed -n '/#lab9tar_/,+1p' 1> temp_lab9.tmp;
+					cat temp_lab9.tmp | sed "/${config[$z]}/,+1d" 1> temp_lab9_.tmp 2>> lab9.log;
+					mv temp_lab9_.tmp temp_lab9.tmp;
+					cat crontab.tmp | sed -n '/#lab9tar_/,+1d' 1> crontab_.tmp 2>> lab9.log;
+					mv crontab_.tmp crontab.tmp;
+					cat temp_lab9.tmp >> crontab.tmp;
+					echo "" >> crontab.tmp;
+					crontab crontab.tmp;
+					rm temp_lab9.tmp;
+					rm crontab.tmp;
+					rm ${configz[$z]};
+					echo 'Удаление завершено.';
+				else
+					echo 'Несуществующий пункт!';
+					exit 1;
+				fi
+			else
+				echo 'Введены буквы!';
+				exit 1;
+			fi
+		fi
+	;;
+	esac
+elif [[ ${#} -eq 2 ]]; then
+	source $2;
+	if [[ $1 == "list" ]]; then
+		clear;
+		echo "inpath=$inpath";
+		echo "outpath=$outpath";
+	elif [[ $1 == "backup" ]]; then
+		path=$(pwd);
+		cd $inpath && tar --lzma -cvpf $outpath/backup_$(date +%d.%m.%Y-%H_%M_%S).tar.lzma * 1> /dev/null && cd $path;
+	fi
+fi
